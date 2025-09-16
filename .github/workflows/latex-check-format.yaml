@@ -16,14 +16,22 @@ on:
       - "docs/**/*.tex"
 
 jobs:
-  format-build:
+  format:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
+      - name: Install tex-fmt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cargo
+          cargo install tex-fmt
+
       - name: Get changed .tex files
         id: changed-tex-files
         uses: tj-actions/changed-files@v47
@@ -31,50 +39,51 @@ jobs:
           files: |
             **/*.tex
           diff_relative: true
-          
-      - name: Prepare root_file list
+
+      - name: Format changed TeX files
+        if: steps.changed-tex-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            tex-fmt "$file"
+          done
+
+      - name: Prepare build matrix
+        id: set-matrix
         if: steps.changed-tex-files.outputs.any_changed == 'true'
         run: |
-          echo "ROOT_FILES<<EOF" >> $GITHUB_ENV
-          echo "${{ steps.changed-tex-files.outputs.all_changed_files }}" | tr ' ' '\n' >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          files="${{ steps.changed-tex-files.outputs.all_changed_files }}"
+          json=$(echo $files | jq -R 'split(" ")')
+          echo "matrix=$json" >> $GITHUB_OUTPUT
 
-
-      - name: Build changed TeX files
+      # save changes for later jobs
+      - name: Upload formatted sources
         if: steps.changed-tex-files.outputs.any_changed == 'true'
-        uses: xu-cheng/latex-action@v3
+        uses: actions/upload-artifact@v4
         with:
-          root_file: ${{ env.ROOT_FILES }}
+          name: formatted-src
+          path: .
+          retention-days: 1
 
-      # - name: Install TeX Live and latexmk
-        # run: |
-          # sudo apt-get update
-          # sudo apt-get install -y texlive-latex-extra texlive-fonts-extra texlive-science latexmk cargo
-          # cargo install tex-fmt
-
-      # - name: Get changed .tex files
-        # id: changed-tex-files
-        # uses: tj-actions/changed-files@v47
-        # with:
-          # files: |
-            # **/*.tex
-          # diff_relative: true
-
-      # Format and Build LaTeX files
-      # - name: Format and Build changed tex files
-        # if: steps.changed-tex-files.outputs.any_changed == 'true'
-        # env:
-          # ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
-        # run: |
-          # for file in ${ALL_CHANGED_FILES}; do
-            # tex-fmt "$file"
-            # folder=$(dirname "$file")
-            # filename=$(basename -- "$file")
-            # echo "Building $filename"
-            # make -C "$folder"
-          # done
-          # git status
-          
+  build:
+    needs: format
+    if: needs.format.outputs.matrix != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.format.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download formatted sources
+        uses: actions/download-artifact@v4
+        with:
+          name: formatted-src
+          path: .
+      - name: Build with latex-action
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: ${{ matrix.file }}
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
@@ -83,13 +92,24 @@ jobs:
           retention-days: 90
           overwrite: true
 
-      - name: Commit & Push changes
-        if: steps.changed-tex-files.outputs.any_changed == 'true'
+  commit:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always() && needs.build.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download formatted sources
+        uses: actions/download-artifact@v4
+        with:
+          name: formatted-src
+          path: .
+      - name: Commit formatted files
         uses: EndBug/add-and-commit@v9
         with:
-          add: |
-            docs/**/*.tex
-          author_name: "Github Action"
+          add: docs/**/*.tex
+          author_name: "GitHub Action"
           author_email: "action@github.com"
           message: "Formatted LaTeX files"
-     
