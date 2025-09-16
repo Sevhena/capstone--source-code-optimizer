@@ -1,9 +1,17 @@
-name: "Build LaTeX Docs"
+name: "Check and Format LaTeX Document"
 
 on:
   push:
     branches:
-      - main
+      - 'docs-**'
+    paths:
+      - "docs/**/*.tex"
+  pull_request:
+    branches:
+      - 'docs-**'
+    types:
+      - opened
+      - synchronize
     paths:
       - "docs/**/*.tex"
 
@@ -15,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
+          
       - name: Get changed .tex files
         id: changed-tex-files
         uses: tj-actions/changed-files@v47
@@ -38,6 +46,34 @@ jobs:
         with:
           root_file: ${{ env.ROOT_FILES }}
 
+      # - name: Install TeX Live and latexmk
+        # run: |
+          # sudo apt-get update
+          # sudo apt-get install -y texlive-latex-extra texlive-fonts-extra texlive-science latexmk cargo
+          # cargo install tex-fmt
+
+      # - name: Get changed .tex files
+        # id: changed-tex-files
+        # uses: tj-actions/changed-files@v47
+        # with:
+          # files: |
+            # **/*.tex
+          # diff_relative: true
+
+      # Format and Build LaTeX files
+      # - name: Format and Build changed tex files
+        # if: steps.changed-tex-files.outputs.any_changed == 'true'
+        # env:
+          # ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
+        # run: |
+          # for file in ${ALL_CHANGED_FILES}; do
+            # tex-fmt "$file"
+            # folder=$(dirname "$file")
+            # filename=$(basename -- "$file")
+            # echo "Building $filename"
+            # make -C "$folder"
+          # done
+          # git status
           
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
@@ -53,8 +89,7 @@ jobs:
         with:
           add: |
             docs/**/*.tex
-            docs/**/*.pdf
           author_name: "Github Action"
           author_email: "action@github.com"
-          message: "Build LaTeX files"
+          message: "Formatted LaTeX files"
      
