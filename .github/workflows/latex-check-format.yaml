@@ -53,8 +53,7 @@ jobs:
         id: set-matrix
         if: steps.changed-tex-files.outputs.any_changed == 'true'
         run: |
-          str-files="${{ steps.changed-tex-files.outputs.all_changed_files }}"
-          echo 'files=($str-files)' >> "$GITHUB_OUTPUT"
+          echo 'files=(${{ steps.changed-tex-files.outputs.all_changed_files }})' >> "$GITHUB_OUTPUT"
 
 
       # save changes for later jobs
