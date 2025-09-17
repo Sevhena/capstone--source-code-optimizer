@@ -55,7 +55,8 @@ jobs:
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
         run: |
-          echo 'files=($ALL_CHANGED_FILES)' >> "$GITHUB_OUTPUT"
+          files=(${ALL_CHANGED_FILES})
+          echo 'files=($files)' >> "$GITHUB_OUTPUT"
 
 
       # save changes for later jobs
