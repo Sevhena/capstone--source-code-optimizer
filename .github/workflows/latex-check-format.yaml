@@ -54,8 +54,10 @@ jobs:
         if: steps.changed-tex-files.outputs.any_changed == 'true'
         run: |
           files="${{ steps.changed-tex-files.outputs.all_changed_files }}"
-          json=$(echo $files | jq -R 'split(" ")')
+          # Convert space-separated list into JSON array safely
+          json=$(printf '%s\n' $files | jq -R -s 'split("\n") | map(select(length > 0))')
           echo "matrix=$json" >> $GITHUB_OUTPUT
+
 
       # save changes for later jobs
       - name: Upload formatted sources
@@ -84,6 +86,7 @@ jobs:
         uses: xu-cheng/latex-action@v4
         with:
           root_file: ${{ matrix.file }}
+          TEXINPUTS: "./refs:./docs:"
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
@@ -106,10 +109,7 @@ jobs:
         with:
           name: formatted-src
           path: .
-      - name: Commit formatted files
-        uses: EndBug/add-and-commit@v9
+      - name: Push
+        uses: stefanzweifel/git-auto-commit-action@master
         with:
-          add: docs/**/*.tex
-          author_name: "GitHub Action"
-          author_email: "action@github.com"
-          message: "Formatted LaTeX files"
+          commit_message: "style: format using tex-fmt"
