@@ -143,5 +143,3 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: "chore: added built PDFs"
-          disable_globbing: true
-          file_pattern: '.pdf'
