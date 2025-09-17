@@ -95,12 +95,13 @@ jobs:
           # Extract just the filename without path and extension
           filename=$(basename "${{ matrix.file }}" .tex)
           echo "artifact_name=$filename" >> $GITHUB_OUTPUT
-      - name: Store PDF path for upload
+      - name: Set PDF path
         id: set-pdf-path
         run: |
           tex_file="${{ matrix.file }}"
-          pdf_file="${tex_file/.tex/.pdf}"
-          echo "pdf_path=$pdf_file" >> $GITHUB_ENV
+          pdf_file="${tex_file%.tex}.pdf"
+          echo "pdf_path=$pdf_file" >> $GITHUB_OUTPUT
+          echo "PDF will be at: $pdf_file"
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
