@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       files: ${{ steps.set-matrix.outputs.files }}
+      str-files: ${{ steps.set-matrix.outputs.str-files }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,6 +38,7 @@ jobs:
           echo "$files"
           JSON_ARRAY=$(echo "$files" | jq -R -s -c 'split(" ")')
           echo "files=$JSON_ARRAY" >> $GITHUB_OUTPUT
+          echo "str-files=$files" >> $GITHUB_OUTPUT
 
   build:
     needs: prepare-matrix
@@ -90,10 +92,11 @@ jobs:
 
       - name: Restore all PDFs to correct locations
         env:
-          FILES_LIST: ${{ needs.prepare-matrix.outputs.files }}
+          FILES_LIST: ${{ needs.prepare-matrix.outputs.str-files }}
         run: |
           # Convert JSON to list of files
-          files=$(echo '$FILES_LIST' | jq -r '.[]')
+          files="$FILES_LIST"
+          echo "Files to restore: $files"
           
           for tex_file in $files; do
             base_name=$(basename "$tex_file" .tex)
