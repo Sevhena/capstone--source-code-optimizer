@@ -19,7 +19,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.set-matrix.outputs.files }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,9 +28,9 @@ jobs:
 
       - name: Install tex-fmt
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cargo
-          cargo install tex-fmt
+          wget https://github.com/WGUNDERWOOD/tex-fmt/releases/download/v0.5.5/tex-fmt-x86_64-linux.tar.gz
+          tar -xzf tex-fmt-x86_64-linux.tar.gz
+          sudo mv tex-fmt /usr/local/bin/
 
       - name: Get changed .tex files
         id: changed-tex-files
@@ -53,10 +53,7 @@ jobs:
         id: set-matrix
         if: steps.changed-tex-files.outputs.any_changed == 'true'
         run: |
-          files="${{ steps.changed-tex-files.outputs.all_changed_files }}"
-          # Convert space-separated list into JSON array safely
-          json=$(printf '%s\n' $files | jq -R -s 'split("\n") | map(select(length > 0))')
-          echo "matrix=$json" >> $GITHUB_OUTPUT
+          echo 'files=(${{ steps.changed-tex-files.outputs.all_changed_files }})' >> "$GITHUB_OUTPUT"
 
 
       # save changes for later jobs
@@ -74,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        file: ${{ fromJson(needs.format.outputs.matrix) }}
+        file: ${{ fromJson(needs.format.outputs.files) }}
     steps:
       - uses: actions/checkout@v4
       - name: Download formatted sources
