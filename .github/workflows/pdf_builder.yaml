@@ -61,7 +61,7 @@ jobs:
         run: |
           # Extract just the filename without path and extension
           file=$(basename "${{ matrix.file }}")
-          filename="${file%.tex}"
+          filename="${file/.tex/.pdf}"
           echo "artifact_name=$filename" >> $GITHUB_OUTPUT
 
       - name: Set PDF path
@@ -90,26 +90,34 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore all PDFs to correct locations
+      - name: Download all PDF artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*"
+          path: downloaded-pdfs
+          merge-multiple: true
+      
+      - name: Move PDFs to correct locations
         env:
-          FILES_LIST: ${{ needs.prepare-matrix.outputs.str-files }}
+          FILES_JSON: ${{ needs.prepare-matrix.outputs.str-files }}
         run: |
           # Convert JSON to list of files
-          files="$FILES_LIST"
-          echo "Files to restore: $files"
-          
-          for tex_file in $files; do
-            base_name=$(basename "$tex_file" .tex)
-            pdf_file="${tex_file%.tex}.pdf"
+          for tex_file in ${FILES_JSON}; do
+            base_name=$(basename "$tex_file")
+            file_name="${base_name/.tex/.pdf}"
+            target_path="${tex_file/.tex/.pdf}"
+            source_pdf="downloaded-pdfs/$base_name"
             
-            # Download the specific artifact
-            if actions-download-artifact --name "${base_name%.tex}" --path . 2>/dev/null; then
-              # The PDF gets downloaded to current directory with its original name
-              # Now move it to the correct path
-              mv -f "$base_name.pdf" "$pdf_file" 2>/dev/null
-              echo "Restored: $pdf_file"
+            if [ -f "$source_pdf" ]; then
+              mv "$source_pdf" "$target_path"
+              echo "Moved: $source_pdf -> $target_path"
+            else
+              echo "PDF not found: $source_pdf (for $tex_file)"
             fi
           done
+          
+          # Clean up the temporary directory
+          rm -rf downloaded-pdfs
 
       - name: Push
         uses: stefanzweifel/git-auto-commit-action@master
