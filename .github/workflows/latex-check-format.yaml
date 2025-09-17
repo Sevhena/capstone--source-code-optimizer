@@ -89,15 +89,11 @@ jobs:
         with:
           work_in_root_file_dir: true
           root_file: ${{ matrix.file }}
-        # env:
-        #   TEXINPUTS: ".:./refs:./docs::"
-        #   BIBINPUTS: ".:./refs:./docs::"
-        #   BSTINPUTS: ".:./refs:./docs::"
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
-          name: built-pdfs
-          path: docs/**/*.pdf
+          name: ${{ matrix.file.split('/').slice(-1)[0].replace('.tex', '.pdf') }}
+          path: ${{ replace(matrix.file, '.tex', '.pdf') }}
           retention-days: 90
           overwrite: true
 
