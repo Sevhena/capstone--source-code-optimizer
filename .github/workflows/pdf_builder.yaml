@@ -85,11 +85,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ success() }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Download all PDF artifacts
         uses: actions/download-artifact@v4
         with:
@@ -102,6 +97,7 @@ jobs:
           FILES_JSON: ${{ needs.prepare-matrix.outputs.str-files }}
         run: |
           git status
+          dir
 
           # Convert JSON to list of files
           for tex_file in ${FILES_JSON}; do
@@ -111,7 +107,7 @@ jobs:
             source_pdf="downloaded-pdfs/$file_name"
             
             if [ -f "$source_pdf" ]; then
-              mv "$source_pdf" "$target_path"
+              mv -f "$source_pdf" "$target_path"
               echo "Moved: $source_pdf -> $target_path"
             else
               echo "PDF not found: $source_pdf (for $tex_file)"
@@ -121,8 +117,13 @@ jobs:
           # Clean up the temporary directory
           rm -rf downloaded-pdfs
 
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Push
-        uses: stefanzweifel/git-auto-commit-action@master
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: "chore: added built PDFs"
           file_pattern: "docs/**/*.pdf"
