@@ -99,7 +99,7 @@ jobs:
         id: set-pdf-path
         run: |
           tex_file="${{ matrix.file }}"
-          pdf_file="${tex_file%.tex}.pdf"
+          pdf_file="${tex_file/.tex/.pdf}"
           echo "pdf_path=$pdf_file" >> $GITHUB_OUTPUT
           echo "PDF will be at: $pdf_file"
       - name: Upload PDFs
