@@ -85,6 +85,11 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ success() }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Download all PDF artifacts
         uses: actions/download-artifact@v4
         with:
@@ -116,11 +121,6 @@ jobs:
           
           # Clean up the temporary directory
           rm -rf downloaded-pdfs
-
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push
         uses: stefanzweifel/git-auto-commit-action@v6
