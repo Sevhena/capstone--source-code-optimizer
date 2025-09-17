@@ -52,8 +52,10 @@ jobs:
       - name: Prepare build matrix
         id: set-matrix
         if: steps.changed-tex-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
         run: |
-          echo 'files=(${{ steps.changed-tex-files.outputs.all_changed_files }})' >> "$GITHUB_OUTPUT"
+          echo 'files=($ALL_CHANGED_FILES)' >> "$GITHUB_OUTPUT"
 
 
       # save changes for later jobs
