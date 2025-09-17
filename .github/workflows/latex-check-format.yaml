@@ -1,14 +1,9 @@
 name: "Check and Format LaTeX Document"
 
 on:
-  push:
-    branches:
-      - 'docs-**'
-    paths:
-      - "docs/**/*.tex"
   pull_request:
     branches:
-      - 'docs-**'
+      - 'docs-*'
     types:
       - opened
       - synchronize
