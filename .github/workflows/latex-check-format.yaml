@@ -56,9 +56,9 @@ jobs:
           ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
         run: |
           files="${ALL_CHANGED_FILES}"
-          read -a arr <<< $files
-          echo "$arr"
-          echo 'files="$arr"' >> "$GITHUB_OUTPUT"
+          echo "$files"
+          JSON_ARRAY=$(echo "$files" | jq -R -s -c 'split(" ")')
+          echo "files=$JSON_ARRAY" >> $GITHUB_OUTPUT
 
 
       # save changes for later jobs
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        file: ${{ fromJson(needs.format.outputs.files) }}
+        file: ${{ fromJSON(needs.format.outputs.files) }}
     steps:
       - uses: actions/checkout@v4
       - name: Download formatted sources
