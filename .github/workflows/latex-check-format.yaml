@@ -88,8 +88,11 @@ jobs:
         uses: xu-cheng/latex-action@v4
         with:
           root_file: ${{ matrix.file }}
+          working_directory: .
         env:
-          TEXINPUTS: "./refs:./docs:"
+          TEXINPUTS: ".:./refs:./docs::"
+          BIBINPUTS: ".:./refs:./docs::"
+          BSTINPUTS: ".:./refs:./docs::"
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
