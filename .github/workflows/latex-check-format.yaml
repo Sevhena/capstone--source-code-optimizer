@@ -98,7 +98,8 @@ jobs:
       - name: Store PDF path for upload
         id: set-pdf-path
         run: |
-          pdf_file="${"${{ matrix.file}}"/.tex/.pdf}"
+          tex_file="${{ matrix.file }}"
+          pdf_file="${tex_file/.tex/.pdf}"
           echo "pdf_path=$pdf_file" >> $GITHUB_ENV
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
