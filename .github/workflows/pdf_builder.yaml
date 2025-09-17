@@ -101,12 +101,14 @@ jobs:
         env:
           FILES_JSON: ${{ needs.prepare-matrix.outputs.str-files }}
         run: |
+          git status
+
           # Convert JSON to list of files
           for tex_file in ${FILES_JSON}; do
             base_name=$(basename "$tex_file")
             file_name="${base_name/.tex/.pdf}"
             target_path="${tex_file/.tex/.pdf}"
-            source_pdf="downloaded-pdfs/$base_name"
+            source_pdf="downloaded-pdfs/$file_name"
             
             if [ -f "$source_pdf" ]; then
               mv "$source_pdf" "$target_path"
