@@ -16,14 +16,22 @@ on:
       - "docs/**/*.tex"
 
 jobs:
-  format-build:
+  format:
     runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.set-matrix.outputs.files }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
+      - name: Install tex-fmt
+        run: |
+          wget https://github.com/WGUNDERWOOD/tex-fmt/releases/download/v0.5.5/tex-fmt-x86_64-linux.tar.gz
+          tar -xzf tex-fmt-x86_64-linux.tar.gz
+          sudo mv tex-fmt /usr/local/bin/
+
       - name: Get changed .tex files
         id: changed-tex-files
         uses: tj-actions/changed-files@v47
@@ -31,65 +39,94 @@ jobs:
           files: |
             **/*.tex
           diff_relative: true
-          
-      - name: Prepare root_file list
+
+      - name: Format changed TeX files
         if: steps.changed-tex-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
         run: |
-          echo "ROOT_FILES<<EOF" >> $GITHUB_ENV
-          echo "${{ steps.changed-tex-files.outputs.all_changed_files }}" | tr ' ' '\n' >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          for file in ${ALL_CHANGED_FILES}; do
+            tex-fmt "$file"
+          done
 
-
-      - name: Build changed TeX files
+      - name: Prepare build matrix
+        id: set-matrix
         if: steps.changed-tex-files.outputs.any_changed == 'true'
-        uses: xu-cheng/latex-action@v3
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
+        run: |
+          files="${ALL_CHANGED_FILES}"
+          echo "$files"
+          JSON_ARRAY=$(echo "$files" | jq -R -s -c 'split(" ")')
+          echo "files=$JSON_ARRAY" >> $GITHUB_OUTPUT
+
+
+      # save changes for later jobs
+      - name: Upload formatted sources
+        if: steps.changed-tex-files.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@v4
         with:
-          root_file: ${{ env.ROOT_FILES }}
+          name: formatted-src
+          path: .
+          retention-days: 1
 
-      # - name: Install TeX Live and latexmk
-        # run: |
-          # sudo apt-get update
-          # sudo apt-get install -y texlive-latex-extra texlive-fonts-extra texlive-science latexmk cargo
-          # cargo install tex-fmt
-
-      # - name: Get changed .tex files
-        # id: changed-tex-files
-        # uses: tj-actions/changed-files@v47
-        # with:
-          # files: |
-            # **/*.tex
-          # diff_relative: true
-
-      # Format and Build LaTeX files
-      # - name: Format and Build changed tex files
-        # if: steps.changed-tex-files.outputs.any_changed == 'true'
-        # env:
-          # ALL_CHANGED_FILES: ${{ steps.changed-tex-files.outputs.all_changed_files }}
-        # run: |
-          # for file in ${ALL_CHANGED_FILES}; do
-            # tex-fmt "$file"
-            # folder=$(dirname "$file")
-            # filename=$(basename -- "$file")
-            # echo "Building $filename"
-            # make -C "$folder"
-          # done
-          # git status
-          
+  build:
+    needs: format
+    if: ${{ needs.format.outputs.files != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ fromJSON(needs.format.outputs.files) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download formatted sources
+        uses: actions/download-artifact@v4
+        with:
+          name: formatted-src
+          path: .
+      - name: Build with latex-action
+        uses: xu-cheng/latex-action@v4
+        with:
+          work_in_root_file_dir: true
+          root_file: ${{ matrix.file }}
+      - name: Set PDF artifact name
+        id: set-name
+        run: |
+          # Extract just the filename without path and extension
+          file=$(basename "${{ matrix.file }}")
+          filename="${file%.tex}"
+          echo "artifact_name=$filename" >> $GITHUB_OUTPUT
+      - name: Set PDF path
+        id: set-pdf-path
+        run: |
+          tex_file="${{ matrix.file }}"
+          pdf_file="${tex_file/.tex/.pdf}"
+          echo "pdf_path=$pdf_file" >> $GITHUB_OUTPUT
+          echo "PDF will be at: $pdf_file"
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
-          name: built-pdfs
-          path: docs/**/*.pdf
+          name: ${{ steps.set-name.outputs.artifact_name }}
+          path: ${{ steps.set-pdf-path.outputs.pdf_path }}
           retention-days: 90
           overwrite: true
 
-      - name: Commit & Push changes
-        if: steps.changed-tex-files.outputs.any_changed == 'true'
-        uses: EndBug/add-and-commit@v9
+  commit:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ success() }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          add: |
-            docs/**/*.tex
-          author_name: "Github Action"
-          author_email: "action@github.com"
-          message: "Formatted LaTeX files"
-     
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download formatted sources
+        uses: actions/download-artifact@v4
+        with:
+          name: formatted-src
+          path: .
+      - name: Push
+        uses: stefanzweifel/git-auto-commit-action@master
+        with:
+          commit_message: "style: format using tex-fmt"
+          file_pattern: "docs/**/*.tex"
