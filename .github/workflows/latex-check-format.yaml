@@ -115,3 +115,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@master
         with:
           commit_message: "style: format using tex-fmt"
+          file_pattern: "docs/**/*.tex"
