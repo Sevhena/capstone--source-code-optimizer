@@ -89,11 +89,22 @@ jobs:
         with:
           work_in_root_file_dir: true
           root_file: ${{ matrix.file }}
+      - name: Set PDF artifact name
+        id: set-name
+        run: |
+          # Extract just the filename without path and extension
+          filename=$(basename "${{ matrix.file }}" .tex)
+          echo "artifact_name=$filename" >> $GITHUB_OUTPUT
+      - name: Store PDF path for upload
+        id: set-pdf-path
+        run: |
+          pdf_file="${"${{ matrix.file}}"/.tex/.pdf}"
+          echo "pdf_path=$pdf_file" >> $GITHUB_ENV
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.file.split('/').slice(-1)[0].replace('.tex', '.pdf') }}
-          path: ${{ replace(matrix.file, '.tex', '.pdf') }}
+          name: ${{ steps.set-name.outputs.artifact_name }}
+          path: ${{ steps.set-pdf-path.outputs.pdf_path }}
           retention-days: 90
           overwrite: true
 
