@@ -79,7 +79,7 @@ jobs:
           overwrite: true
 
   commit:
-    needs: build
+    needs: [prepare-matrix, build]
     runs-on: ubuntu-latest
     if: ${{ success() }}
     steps:
