@@ -93,7 +93,8 @@ jobs:
         id: set-name
         run: |
           # Extract just the filename without path and extension
-          filename=$(basename "${{ matrix.file }}" .tex)
+          file=$(basename "${{ matrix.file }}")
+          filename="${file%.tex}"
           echo "artifact_name=$filename" >> $GITHUB_OUTPUT
       - name: Set PDF path
         id: set-pdf-path
