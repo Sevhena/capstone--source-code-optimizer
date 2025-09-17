@@ -89,7 +89,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Download all PDF artifacts
         uses: actions/download-artifact@v4
         with:
@@ -111,9 +111,22 @@ jobs:
             target_path="${tex_file/.tex/.pdf}"
             source_pdf="downloaded-pdfs/$file_name"
             
+            echo "Processing: $target_path"
+          
+            # Check if source PDF exists
             if [ -f "$source_pdf" ]; then
-              mv -f "$source_pdf" "$target_path"
-              echo "Moved: $source_pdf -> $target_path"
+              # Check if target PDF already exists and delete it
+              if [ -f "$target_path" ]; then
+                echo "Deleting existing PDF: $target_path"
+                rm -f "$target_path"
+              else
+                echo "No existing PDF found at: $target_path"
+              fi
+              
+              # Move the new PDF
+              mv "$source_pdf" "$target_path"
+              echo "Moved new PDF: $source_pdf -> $target_path"
+              
             else
               echo "PDF not found: $source_pdf (for $tex_file)"
             fi
@@ -121,9 +134,14 @@ jobs:
           
           # Clean up the temporary directory
           rm -rf downloaded-pdfs
+          
+          # Debug: Show git status to verify changes
+          echo "=== Git status ==="
+          git status
 
       - name: Push
         uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: "chore: added built PDFs"
-          file_pattern: "docs/**/*.pdf"
+          disable_globbing: true
+          file_pattern: '.pdf'
