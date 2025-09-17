@@ -53,7 +53,8 @@ jobs:
         id: set-matrix
         if: steps.changed-tex-files.outputs.any_changed == 'true'
         run: |
-          echo 'files=(${{ steps.changed-tex-files.outputs.all_changed_files }})' >> "$GITHUB_OUTPUT"
+          str-files="${{ steps.changed-tex-files.outputs.all_changed_files }}"
+          echo 'files=($str-files)' >> "$GITHUB_OUTPUT"
 
 
       # save changes for later jobs
@@ -67,7 +68,7 @@ jobs:
 
   build:
     needs: format
-    if: needs.format.outputs.matrix != ''
+    if: ${{ needs.format.outputs.files != '' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -95,7 +96,7 @@ jobs:
   commit:
     needs: build
     runs-on: ubuntu-latest
-    if: always() && needs.build.result == 'success'
+    if: ${{ success() }}
     steps:
       - uses: actions/checkout@v4
         with:
